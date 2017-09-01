@@ -1,0 +1,22 @@
+IMMEDIATE = DEFERRED
+IMMEDIATE ?= DEFERRED
+IMMEDIATE := IMMEDIATE
+IMMEDIATE += DEFERRED or IMMEDIATE
+define IMMEDIATE
+	DEFERRED
+endef
+
+ifdef
+endif
+
+ifeq
+endif
+
+ifndef
+endif
+
+ifneq
+endif
+
+IMMEDIATE : IMMEDIATE ; DEFERRED
+	DEFERRED

@@ -1,0 +1,11 @@
+#规则语法
+
+# 通常规则的语法格式如下:
+TARGETS : PREREQUISITES
+	COMMAND
+
+# 或者:
+TARGETS : PREREQUISITES ; COMMAND
+	COMMAND
+
+
