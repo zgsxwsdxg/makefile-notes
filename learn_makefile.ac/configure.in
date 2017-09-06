@@ -1,0 +1,32 @@
+AC_INIT(src/hello.c)
+
+AC_HEADER_STDC()
+AC_ARG_PROGRAM()
+AC_SUBST(CFLAGS)
+AC_SUBST(CPPFLAGS)
+AC_SUBST(LDFLAGS)
+AC_OUTPUT(\
+[Makefile \
+macros/Makefile \
+src/Makefile \
+intl/Makefile \
+po/Makefile.in \
+pixmaps/Makefile \
+doc/Makefile \
+doc/C/Makefile \
+doc/es/Makefile]\
+)
+
+AC_CHECK_LIB()
+AC_CHECK_HEADER()
+AC_CONFIG_HEADERS()
+AC_CONFIG_FILES()
+AC_PROG_RANLIB()
+AC_CONFIG_SRCDIR(FILE)
+AC_CONFIG_AUX_DIR(DIRECTORY)
+# 编译器检测
+AC_PROG_CXX()
+AC_PROG_CC()
+
+AC_DEFINE()
+

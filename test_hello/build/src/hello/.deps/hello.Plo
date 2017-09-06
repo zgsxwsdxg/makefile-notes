@@ -1,0 +1,4 @@
+../src/hello/hello.lo: ../../src/hello/hello.cpp \
+ /usr/include/stdc-predef.h
+
+/usr/include/stdc-predef.h:
