@@ -251,3 +251,6 @@ installdirs: mkinstalldirs
 	$(POST_INSTALL)# 以下是安装后命令
 	$(NORMAL_INSTALL) # 以下是正常命令
 
+# 自动推导规则
+# 在使用make编译.c源文件时,编译.c源文件规则的命令可以不用明确给出。这是因为make本身存在一个默认的规则,能够自动完成对.c文件的编译并生成对应的.o文件
+
