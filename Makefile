@@ -1,2 +1,4 @@
-SOURCES = $(wildcard *.c)
-HEADERS = $(wildcard *.h)  
+CWD = $(shell pwd)
+
+show:
+	echo $(CWD)

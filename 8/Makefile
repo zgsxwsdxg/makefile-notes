@@ -227,9 +227,115 @@ files := $(foreach dir,$(dirs),$(find_files))
 SUBDIR += $(if $(SRC_DIR) $(SRC_DIR),/home/src)
 # 函数的结果是:如果“SRC_DIR”变量值不为空,则将变量“SRC_DIR”指定的目录作为一个子目录;否则将目录“/home/src”作为一个子目录。
 
+# call函数
+# 用户自己定义函数引用
+# 函数语法: $(call VARIABLE,PARAM,PARAM,...)
+# 函数功能:在执行时,将它的参数“PARAM”依次赋值给临时变量“$(1)”、“$(2)”(这些临时变量定义在“VARIABLE”的值中,参考下边的例子)...... call 函数对参数的数目没有限制,也可以没有参数值,没有参数值的“call”没有任何实际存在的意义。
+# 函数说明:
+# 1. 函数中“VARIBLE”是一个变量名,而不是变量引用。因此,通常“call”函数中的“VARIABLE”中不包含“$”(当然,除非此变量名是一个计算的变量名)。
+# 2. 当变量“VARIBLE”是一个 make 内嵌的函数名时(如“if”、“foreach”、“strip”等),对“PARAM”参数的使用需要注意,因为不合适或者不正确的参数将会导致函数的返回值难以预料。
+# 3. 函数中多个“PARAM”之间使用逗号分割。
+# 4. 变量“VARIABLE”在定义时不能定义为直接展开式!只能定义为递归展开式。
+# 首先,来看一个简单的例子。
+# 示例 1:
+reverse = $(2) $(1)
+foo = $(call reverse,a,b)
+# 变量“foo”的值为“ba”。这里变量“reverse”中的参数定义顺序可以根据需要来调整,并不是需要按照“$(1)”、“$(2)”、“$(3)”...... 这样的顺序来定义。
+# 看一个稍微复杂一些的例子。我们定义了一个宏“pathsearch”来在“PATH”路径中搜索第一个指定的程序。
+# 示例 2:
+pathsearch = $(firstword $(wildcard $(addsuffix /$(1),$(subst :, ,$(PATH)))))
+LS := $(call pathsearch,ls)
 
+# value函数
+# 函数“value”提供了一种在不对变量进行展开的情况下获取变量值的方法。
+# 函数语法: $(value VARIABLE)
+# 函数功能:不对变量“VARIBLE”进行任何展开操作,直接返回变量“VARIBALE”的值。这里“VARIABLE”是一个变量名,一般不包含“$”(除非计算的变量名),
+# 返回值:变量“VARIBALE”所定义文本值(如果变量定义为递归展开式,其中包含对其他变量或者函数的引用,那么函数不对这些引用进行展开。函数的返回值是包含有引用值)。
+# 函数说明:
+# 示例:
+# sample Makefile
+FOO = $PATH
+all:
+	@echo $(FOO)
+	@echo $(value FOO)
+# 执行make,可以看到的结果是:第一行为:“ATH”。这是因为变量“FOO”定义为“$PATH”,所以展开为“ATH”(“$P”为空,参考 6.1 变量的引用 一节)。第二行才是我们需要显示的系统环境变量“PATH”的值(value函数得到变量“FOO”的值为“$PATH”)。
 
+# eval函数
+# 函数功能:函数“eval”是一个比较特殊的函数。使用它可以在Makefile中构造一个可变的规则结构关系(依赖关系链),其中可以使用其它变量和函数。函数“eval”对它的参数进行展开,展开的结果作为Makefile的一部分,make可以对展开内容进行语法解析。展开的结果可以包含一个新变量、目标、隐含规则或者是明确规则等。也就是说此函数的功能主要是:根据其参数的关系、结构,对它们进行替换展开
+# 函数说明:“eval”函数执行时会对它的参数进行两次展开。第一次展开过程发是由函数本身完成的,第二次是函数展开后的结果被作为Makefile内容时由make解析时展开的。明确这一过程对于使用“eval”函数非常重要。理解了函数“eval”二次展开的过程后。实际使用时,如果在函数的展开结果中存在引用(格式为: $(x)),那么在函数的参数中应该使用“$$”来代替“$”(参考 6.1变量的引用 一节)。因为这一点,所以通常它的参数中会使用函数“value”来取一个变量的文本值
+# sample Makefile
+PROGRAMS = server client
+server_OBJS = server.o server_priv.o server_access.o
+server_LIBS = priv protocol
+client_OBJS = client.o client_api.o client_mem.o
+client_LIBS = protocol
+# Everything after this is generic
+.PHONY: all
+all: $(PROGRAMS)
+define PROGRAM_template
+$(1): $$($(1)_OBJ) $$($(1)_LIBS:%=-l%)
+ALL_OBJS
++= $$($(1)_OBJS)
+endef
+$(foreach prog,$(PROGRAMS),$(eval $(call PROGRAM_template,$(prog))))
+$(PROGRAMS):
+	$(LINK.o) $^ $(LDLIBS) -o $@
+clean:
+	$(RM) $(ALL_OBJS) $(PROGRAMS)
+# 来看一下这个例子:它实现的功能是完成“PROGRAMS”的编译链接。
+# 例子中“$(LINK.o)”为“$(CC) $(LDFLAGS)”,意思是对所有的.o文件和指定的库文件进行链接。
 
+# origin函数
+# 函数“origin”和其他函数不同,函数“origin”的动作不是操作变量(它的参数)。它只是获取此变量(参数)相关的信息,告诉我们这个变量的出处(定义方式)。
+# 函数语法: $(origin VARIABLE)
+# 函数说明:“VARIABLE”是一个变量名而不是一个变量的引用。因此通常它不包含“$”(当然,计算的变量名例外)。
+# 返回值:返回“VARIABLE”的定义方式。用字符串表示。函数的返回情况有以下几种:
+# 1. undefined 变量“VARIABLE”没有被定义。
+# 2. default 变量“VARIABLE”是一个默认定义(内嵌变量)。如“CC”、“MAKE”、“RM”等变量(参考 10.3 隐含变量 一节)。如果在Makefile中重新定义这些变量,函数返回值将相应发生变化。
+# 3. environment 变量“VARIABLE”是一个系统环境变量,并且make没有使用命令行选项“-e”(Makefile中不存在同名的变量定义,此变量没有被替代)。
+# 4. environment override 变量“VARIABLE”是一个系统环境变量,并且make使用了命令行选项“-e”。Makefile中存在一个同名的变量定义,使用“make -e”时环境变量值替代了文件中的变量定义。
+# 5. file 变量“VARIABLE”在某一个 makefile 文件中定义。
+# 6. command line 变量“VARIABLE”在命令行中定义。
+# 7. override 变量“VARIABLE”在 makefile 文件中定义并使用“override”指示符声明。
+# 8. automatic变量“VARIABLE”是自动化变量。
 
+# 函数“origin”返回的变量信息对我们书写 Makefile 是相当有用的,可以使我们在使用一个变量之前对它值的合法性进行判断。
+ifdef bletch
+ifeq "$(origin bletch)" "environment"
+bletch = barf, gag, etc.
+endif
+endif
+# 这里,如果存在环境变量“bletch”,则对它进行重定义。
+ifneq "$(findstring environment,$(origin bletch))" ""
+bletch = barf, gag, etc.
+endif
 
+# shell函数
+# shell函数不同于除“wildcard”函数之外的其它函数。make可以使用它来和外部通信。
+# 函数功能:函数“shell”所实现的功能和shell中的引用(``)相同。实现对命令的扩展。这就意味着需要一个shell 命令作为此函数的参数,函数的返回结果是此命令在shell中的执行结果。
+# 函数说明:函数本身的返回值是其参数的执行结果,没有进行任何处理。对结果的处理是由 make 进行的.
+# 示例 1:
+contents := $(SHELL cat foo)
+# 将变量“contents”赋值为文件“foo”的内容,文件中的换行符在变量中使用空格代替。
+# 示例 2:
+files := $(shell echo *.c)
+# 将变量“files”赋值为当前目录下所有.c文件的列表(文件名之间使用空格分割)。在shell中之行的命令是“echo *.c”,此命令返回当前目录下的所有.c文件列表。
+
+# make的控制函数
+# make 提供了两个控制 make 运行方式的函数。通常它们用在 Makefile 中,当 make执行过程中检测到某些错误是为用户提供消息,并且可以控制 make 过程是否继续。
+# $(error TEXT...)
+# 假设我们的 Makefile 中包含以下两个片断;
+# 示例 1:
+ifdef ERROR1
+$(error error is $(ERROR1))
+endif
+
+# 示例 2:
+ERR = $(error found an error!)
+.PHONY: err
+err: ; $(ERR)
+# 这个例子,在 make 读取 Makefile 时不会出现致命错误。只有目标“err”被作为一个目标被执行时才会出现。
+
+# $(warning TEXT...)
+# 函数功能:函数“warning”类似于函数“error”,区别在于它不会导致致命错误(make 不退出),而只是提示“TEXT...”,make 的执行过程继续。
 
